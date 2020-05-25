@@ -1,0 +1,5 @@
+trash/
+__pycache__/
+*.pyc
+*.db
+venv/
