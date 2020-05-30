@@ -1,10 +1,13 @@
-from flask import render_template, redirect, url_for, flash, jsonify
+from flask import (
+	render_template, redirect, request, url_for, flash, jsonify
+)
 from flask_login import (
 	LoginManager,
 	current_user, login_user, logout_user, login_required
 )
 from notes import app, db
-from .models import User, Note, UserNoteParams
+from sqlalchemy import or_
+from .models import User, Note, UserNoteParams, PrivateAccess
 from .forms import (
 		NoteForm,
 		UserForm,
@@ -47,34 +50,66 @@ def get_params_by_fk(note_id, user_id):
 					user_id=user_id).first()
 
 
-def db_session_add(new_elem, message=''):
+def db_session_add(new_elem, succ_msg='', err_msg='Some error...'):
 	try:
+		flash('next add')
 		db.session.add(new_elem)
+		flash('next commit')
 		db.session.commit()
-		flash(message)
+		if succ_msg:
+			flash(succ_msg)
 	except:
+		if err_msg:
+			flash(err_msg)
 		db.session.rollback()
 
 
-def db_session_delete(query, del_id, message=''):
+def db_session_delete(del_elem, succ_msg='', err_msg='Some error...'):
 	try:
-		del_item = db.session.query(query).get(del_id)
-		db.session.delete(del_item)
+		flash('next delete')
+		db.session.delete(del_elem)
+		flash('next commit')
 		db.session.commit()
-		flash(message)
+		if succ_msg:
+			flash(succ_msg)
 	except:
+		if err_msg:
+			flash(err_msg)
 		db.session.rollback()
+
+
+
+@app.route("/chart")
+def chart():
+	legend = 'Notes Type'
+	labels = ['anonymous notes', 'user notes']
+
+	anon_notes_count = db.session.query(Note).join(UserNoteParams, 
+					UserNoteParams.note_id == Note.id, isouter=True)\
+					.filter(UserNoteParams.id == None).count()
+	user_notes_count = db.session.query(UserNoteParams.id).count()
+	values = [anon_notes_count, user_notes_count]
+	return render_template('chart.html', values=values, labels=labels, legend=legend)
 
 
 @app.route('/')
 def index():
-	#check by parameters if public
-	return render_template('index.html')
+	notes = db.session.query(Note).join(UserNoteParams, 
+					UserNoteParams.note_id == Note.id, isouter=True)\
+					.join(User, 
+					User.id == UserNoteParams.user_id, isouter=True)\
+					.add_columns(Note.id, Note.title, Note.url_id,
+						Note.created, Note.updated, User.username)\
+					.filter(or_(UserNoteParams.id == None,
+								UserNoteParams.private_access == False))\
+					.order_by(Note.created.desc())
+	
+	return render_template('index.html', notes=notes)
 
 
 def generate_url_id():
-	alphabet = digits + ascii_letters.upper() + ascii_letters
-	url_id = ''.join(sec_choice(alphabet) for i in range(10))
+	alphabet = digits + ascii_letters.upper() + digits + ascii_letters
+	url_id = ''.join(sec_choice(alphabet) for i in range(9))
 	return url_id
 
 
@@ -82,11 +117,11 @@ def generate_url_id():
 def note_create():
 	new_url_id = generate_url_id()
 	new_note = Note(url_id=new_url_id)
-	message = '{}th note'.format(new_note.id)
-	db_session_add(new_note, message)
+	db_session_add(new_note)
+	flash('{}th note'.format(new_note.id))
 
 	if current_user.is_authenticated:
-		params = get_params_by_fk(new_note.id, current_user.id)
+		params = UserNoteParams(note_id=new_note.id, user_id=current_user.id,)
 		db_session_add(params)	
 
 	return redirect(url_for('note_edit', url_id=new_url_id))
@@ -94,23 +129,37 @@ def note_create():
 
 @app.route('/edit/<string:url_id>', methods=['GET', 'POST'])
 def note_edit(url_id):
-	note = get_note_by_url_id(url_id)
+	note = db.session.query(Note).filter_by(url_id=url_id).first()
 	if not note:
 		return jsonify('404: Not Found'), 404
 
 	params_form = None
-	note_form = NoteEditForm(request.POST, obj=note)
-	if current_user.is_authenticated:
-		params = get_params_by_fk(note.id, current_user.id)
-		if params:
-			params_form = UserNoteParamsForm(request.POST, obj=params)
-			params_form.access.default = 'private' if params.private_access else 'public'
-	if note_form.validate_on_submit():
+	note_form = NoteForm(formdata=request.form, obj=note)
+	params = db.session.query(UserNoteParams).filter_by(
+										note_id=note.id).first()
+	if params:
+		if current_user.is_authenticated \
+			and params.user_id == current_user.id:
+			params_form = UserNoteParamsForm(formdata=request.form, obj=params)
+			params_form.access.data = 'private' if params.private_access else 'public'
+		else:
+			if params.private_access:
+				return redirect(url_for('user_notes', user_id=params.user_id))
+			if not params.change_possibility or params.encryption:
+				return redirect(url_for('note_view', url_id=url_id))
+	if request.method == 'POST' and note_form.validate_on_submit():
 		if params_form:
-			params.private_access = True if params_form.access.default == 'private' else False
+			params.private_access = True if params_form.access.data == 'private' else False
+			params.encryption = params_form.encryption.data
+			params.change_possibility = params_form.change_possibility.data
+		note.title = note_form.title.data
+		note.text = note_form.text.data
+		flash('Information updated')
 		db.session.commit()
+		if note_form.publish.data:
+			return redirect(url_for('note_view', url_id=url_id))
 
-	return render_template('note_edit.html', note_form=note_form, params_form=params_form)
+	return render_template('note_edit.html', url_id=url_id, note_form=note_form, params_form=params_form)
 
 
 @app.route('/view/<string:url_id>')
@@ -118,25 +167,50 @@ def note_view(url_id):
 	note = get_note_by_url_id(url_id)
 	if not note:
 		return jsonify('404: Not Found'), 404
-	params = UserNoteParams.query.filter_by(note_id=note_id).first()
+	params = UserNoteParams.query.filter_by(note_id=note.id).first()
 	if params:
-		pass
+		if (current_user.is_authenticated \
+				and params.user_id == current_user.id) \
+				or not params.private_access:
+			return render_template('note_view.html', note=note, params=params)
+		else:
+			author = User.query.get(params.user_id)
+			flash("This note under private control, don't touch that!11)00")
+			return redirect(url_for('user_notes', username=author.username))
+	return render_template('note_view.html', note=note, params=None)
 
-	return render_template('note_view.html', note=note, params=params)
 
-
-@app.route('/view/<string:url_id>/delete')
+@app.route('/edit/<string:url_id>/delete')
 def note_delete(url_id):
-	return render_template('note_view.html')
+	note = db.session.query(Note).filter_by(url_id=url_id)
+	params = db.session.query(UserNoteParams).filter_by(note_id=note.id).first()
+	if params:
+		if not current_user.is_authenticated \
+			or params.user_id != current_user.id:
+			flash("You have not rights to delete this note!11")
+			return redirect(url_for('note_view', url_id=url_id))
+
+	accesses = db.session.query(PrivateAccess).filter_by(user_id=user_id).all()
+	for access in accesses:
+		db_session_delete(access, err_msg='did not have accesses')
+	db_session_delete(note, "{}'th note was deleted".format(note.id))
+	
+	return redirect(url_for('note_view', url_id=url_id))
 
 
 @app.route('/user/<string:username>')
-@quote_kw_args
+# @quote_kw_args
 def user_notes(username):
 	user = get_user_by_username(username)
 	if not user:
 		return jsonify('404: Not Found'), 404
-	params = UserNoteParams.query.filter_by(user_id=user.id)
+
+	if current_user.is_authenticated \
+		and current_user.username == user.username:
+		params = UserNoteParams.query.filter_by(user_id=user.id).all()
+	else:
+		params = UserNoteParams.query.filter_by(
+					user_id=user.id, private_access=False).all()
 	notes = []
 	for param in params:
 		notes.append(Note.query.get(param.note_id))
@@ -146,19 +220,48 @@ def user_notes(username):
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-	user = User.query.get(current_user.id)
-	form = UserForm(user)
-	if form.validate_on_submit():
-		flash('Information updated')
-		db.session.commit()
-		return redirect(url_for('profile'))
+	user = db.session.query(User).get(current_user.id)
+	form = UserForm(formdata=request.form, obj=user)
+	if request.method == 'POST' and form.validate_on_submit():
+		if user.check_password(form.curr_password.data):
+			try:
+				user.username = form.username.data
+				user.email = form.email.data
+				if form.new_password.data:
+					if len(form.new_password.data) >= 8:
+						user.password = form.new_password.data
+					else:
+						flash('new_password: length must be between 8 and 40')
+				db.session.commit()
+				flash('Information updated')
+				return redirect(url_for('profile'))
+			except:
+				flash('Some error...')
+				db.session.rollback()
+		else:
+			flash('Current password is not correct')
+	elif form.submit.data and not form.validate_on_submit():
+		for fieldName, errorMessages in form.errors.items():
+			flash('{}: {}'.format(fieldName, errorMessages))
 
 	return render_template('profile.html', form=form)
 
 
-@app.route('/profile/delete')
+@app.route('/profile/delete/<int:user_id>')
 @login_required
-def profile_delete(url_id):
+def profile_delete(user_id):
+	params = db.session.query(UserNoteParams).filter_by(user_id=user_id).all()
+	accesses = db.session.query(PrivateAccess).filter_by(user_id=user_id).all()
+	for access in accesses:
+		db_session_delete(access, err_msg='did not have accesses')
+	for param in params:
+		note = db.session.query(Note).get(param.note_id)
+		db_session_delete(note,
+			err_msg='problem via {}th note deleting'.format(param.note_id))
+		db_session_delete(param, err_msg='did not have params')
+	user = db.session.query(User).get(user_id)
+	db_session_delete(user, "{}'s Profile was deleted".format(user.username))
+	
 	return redirect(url_for('login'))
 
 
@@ -178,6 +281,7 @@ def login():
 					form.username.data, form.remember_me.data))
 				return redirect(url_for('profile'))
 		flash('Invalid username or password')
+
 	return render_template('login.html', form=form)
 
 
@@ -190,10 +294,10 @@ def register():
 	if form.validate_on_submit():
 		if get_user_by_username(form.username.data):
 			flash('User "{}" already exist'.format(form.username.data))
-			return redirect(url_for('register'))
+			# return redirect(url_for('register'))
 		else:
 			new_user = User(username=form.username.data,
-							password_hash=form.password.data,
+							password=form.password.data,
 							email=form.email.data)
 
 			message = 'Sign Up requested for user "{}"'.format(form.username.data)
@@ -201,8 +305,8 @@ def register():
 
 			return redirect(url_for('login'))
 	elif form.submit.data and not form.validate_on_submit():
-		flash('Fill the fields. NEED TO BE IN WTFORMS')
-		return redirect(url_for('register'))
+		flash('{} - {} - {} - {}'.format(form.username.data,form.password.data,form.confirm.data,form.email.data))
+
 	return render_template('register.html', form=form)
 
 

@@ -1,5 +1,5 @@
 import os
-from .credentials import (
+from credentials import (
 	DB_DIALECT, DB_LOGIN, DB_PASSWORD, DB_HOST, DB_NAME
 )
 

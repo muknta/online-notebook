@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block css_links %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notes.css') }}">
+{% endblock %}
+    
+
+{% block content %}
+    <div class="content-notes">
+        <h1>My notes</h1>
+        
+
+        <table id="printIndentTable" class="table table-bordered table-hover ">
+            <tr>
+              <th>Title</th>
+              <th>Author</th>
+              <th>Timestamp</th>
+            </tr>
+            {% for note in notes %}
+            <tr>
+              <td><a href="{{url_for('note_view', url_id=note.url_id)}}">{{ note.title }}</a></td>
+              {% if current_user.username %}
+                <td><a href="{{url_for('user_notes', username=current_user.username)}}">{{ current_user.username }}</a></td>
+              {% else %}
+                <td>{{ current_user.username }}</td>
+              {% endif %}
+              {% if note.updated %}
+                <td>{{ note.updated }}</td>
+              {% else %}
+                <td>{{ note.created }}</td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </table>
+
+
+    </div>
+{% endblock %}
+
+
+{% block js_code %}
+{% endblock %}

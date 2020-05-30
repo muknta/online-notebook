@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block css_links %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/authorization.css') }}">
+{% endblock %}
+    
+
+{% block content %}
+    <div class="content-section">
+	    <h1>Sign In</h1>
+	    <form action="" method="POST" novalidate>
+	        {{ form.hidden_tag() }}
+	        <p>
+	            {{ form.username.label }}<br>
+	            {{ form.username(class_="form-control", size=32) }}
+	            <ul class="errors">{% for error in form.username.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+	        </p>
+	        <p>
+	            {{ form.password.label }}<br>
+	            {{ form.password(class_="form-control", size=32) }}
+	            <ul class="errors">{% for error in form.password.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+	        </p>
+	        <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
+	        <p class="buttons">{{ form.submit(class_="btn btn-dark") }}
+	        	<button class="btn btn-warning" formaction="{{ url_for('register') }}">Sign Up</button>
+	        </p>
+	    </form>
+	</div>
+{% endblock %}
+
+
+{% block js_code %}
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block css_links %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notes.css') }}">
+{% endblock %}
+    
+
+{% block content %}
+    <div class="content-notes">
+        <h1>Note View</h1>
+        
+        <p>Title</p>
+        <p>{{ note.title }}</p>
+        <p>Text</p>
+        {% if current_user.id == params.user_id or not params.encryption %}
+            <p> {{ note.text }} </p>
+        {% endif %}
+        {% if current_user.id == params.user_id or params.change_possibility %}
+            <p class="buttons">
+                <a class="btn btn-dark" href="{{ url_for('note_edit', url_id=note.url_id) }}">Edit</a>
+            </p>
+        {% endif %}
+        
+    </div>
+{% endblock %}
+
+
+{% block js_code %}
+{% endblock %}

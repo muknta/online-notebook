@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block css_links %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notes.css') }}">
+{% endblock %}
+    
+
+{% block content %}
+    <div class="content-notes">
+        <h1>Note Edit</h1>
+        
+        <form action="" method="POST" novalidate>
+            {{ note_form.hidden_tag() }}
+            {% if params_form %}
+                {{ params_form.hidden_tag() }}
+                <fieldset class="form-group">
+                {{ params_form.access() }}<br>
+                {{ params_form.encryption.label }}
+                {{ params_form.encryption() }}<br>
+                {{ params_form.change_possibility.label }}
+                {{ params_form.change_possibility() }}<br>
+                </fieldset>
+            {% endif %}
+            <p>
+                {{ note_form.title.label }}<br>
+                {{ note_form.title(class_="form-control", size=32) }}
+            </p>
+            <p>
+                {{ note_form.text.label }}<br>
+                {{ note_form.text(class_="form-control", size=32) }}
+            </p>
+            <p class="buttons">
+                {{ note_form.save(class_="btn btn-warning") }}
+                {{ note_form.publish(class_="btn btn-warning") }}
+                <a class="btn btn-dark" href="{{ url_for('note_view', url_id=url_id) }}">View</a>
+            </p>
+        </form>
+    </div>
+{% endblock %}
+
+
+{% block js_code %}
+{% endblock %}

@@ -49,9 +49,9 @@ class UserNoteParams(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	note_id = db.Column(db.Integer, db.ForeignKey('note.id'))
 	user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-	change_possibility = db.Column(db.Boolean)
-	private_access = db.Column(db.Boolean)
-	encryption = db.Column(db.Boolean)
+	change_possibility = db.Column(db.Boolean, default=False)
+	private_access = db.Column(db.Boolean, default=True)
+	encryption = db.Column(db.Boolean, default=False)
 	# one to one
 	user = db.relationship('User', backref=db.backref('user_note_params'), uselist=False)
 	# many to one

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block css_links %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/authorization.css') }}">
+{% endblock %}
+    
+
+{% block content %}
+    <div class="content-section">
+        <h1>{{ current_user.username }}'s Profile</h1>
+        
+        <form action="" method="POST" novalidate>
+            {{ form.hidden_tag() }}
+            <p>
+                {{ form.username.label }}<br>
+                {{ form.username(class_="form-control") }}
+            </p>
+            <p>
+                {{ form.email.label }}<br>
+                {{ form.email(class_="form-control", size=32) }}
+            </p>
+            <p>
+                {{ form.curr_password.label }}<br>
+                {{ form.curr_password(class_="form-control", size=32) }}
+            </p>
+            <p>
+                {{ form.new_password.label }}<br>
+                {{ form.new_password(class_="form-control", size=32) }}
+            </p>
+            <p>
+                {{ form.confirm.label }}<br>
+                {{ form.confirm(class_="form-control", size=32) }}
+            </p>
+            <p class="buttons">
+                {{ form.submit(class_="btn btn-dark") }}
+                <a class="btn btn-danger" href="{{ url_for('profile_delete', user_id=current_user.id) }}">Delete</a>
+            </p>
+        </form>
+    </div>
+{% endblock %}
+
+
+{% block js_code %}
+{% endblock %}
