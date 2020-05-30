@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %} <title>Note Edit</title> {% endblock %}
+
 {% block css_links %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/notes.css') }}">
 {% endblock %}
@@ -33,6 +35,7 @@
                 {{ note_form.save(class_="btn btn-warning") }}
                 {{ note_form.publish(class_="btn btn-warning") }}
                 <a class="btn btn-dark" href="{{ url_for('note_view', url_id=url_id) }}">View</a>
+                <a class="btn btn-danger" href="{{ url_for('note_delete', url_id=url_id) }}">Delete</a>
             </p>
         </form>
     </div>

@@ -1,5 +1,5 @@
 DB_DIALECT = 'mysql'
-DB_LOGIN = 'myuserbil'
-DB_PASSWORD = 'Z7g3bBKKWdko'
+DB_LOGIN = 'user'
+DB_PASSWORD = 'pass'
 DB_HOST = 'localhost'
 DB_NAME = 'user_notes'

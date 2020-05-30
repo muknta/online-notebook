@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %} <title>Public Notes</title> {% endblock %}
+
 {% block css_links %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/authorization.css') }}">
 {% endblock %}
@@ -7,7 +9,7 @@
 
 {% block content %}
     <!-- <div class="content-section"> -->
-        <h1>Index</h1>
+        <h1>Public Notes</h1>
         
 
         <table id="printIndentTable" class="table table-bordered table-hover ">

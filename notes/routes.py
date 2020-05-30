@@ -18,6 +18,7 @@ from .forms import (
 from secrets import choice as sec_choice
 from string import digits, ascii_letters
 from urllib.parse import quote, unquote
+from functools import wraps
 
 
 login_manager = LoginManager()
@@ -31,9 +32,11 @@ def load_user(user_id):
 
 # decorator for route percent-encoding
 def quote_kw_args(function):
+	@wraps(function)
 	def wrap_fun(*args, **kwargs):
 		upd_kwargs = dict(zip(kwargs, map(quote, kwargs.values())))
 		upd_args = map(quote, args)
+
 		return function(*upd_args, **upd_kwargs)
 	return wrap_fun
 
@@ -52,9 +55,7 @@ def get_params_by_fk(note_id, user_id):
 
 def db_session_add(new_elem, succ_msg='', err_msg='Some error...'):
 	try:
-		flash('next add')
 		db.session.add(new_elem)
-		flash('next commit')
 		db.session.commit()
 		if succ_msg:
 			flash(succ_msg)
@@ -66,9 +67,7 @@ def db_session_add(new_elem, succ_msg='', err_msg='Some error...'):
 
 def db_session_delete(del_elem, succ_msg='', err_msg='Some error...'):
 	try:
-		flash('next delete')
 		db.session.delete(del_elem)
-		flash('next commit')
 		db.session.commit()
 		if succ_msg:
 			flash(succ_msg)
@@ -76,7 +75,6 @@ def db_session_delete(del_elem, succ_msg='', err_msg='Some error...'):
 		if err_msg:
 			flash(err_msg)
 		db.session.rollback()
-
 
 
 @app.route("/chart")
@@ -144,7 +142,8 @@ def note_edit(url_id):
 			params_form.access.data = 'private' if params.private_access else 'public'
 		else:
 			if params.private_access:
-				return redirect(url_for('user_notes', user_id=params.user_id))
+				username = User.query.get(params.user_id).username
+				return redirect(url_for('user_notes', username=username))
 			if not params.change_possibility or params.encryption:
 				return redirect(url_for('note_view', url_id=url_id))
 	if request.method == 'POST' and note_form.validate_on_submit():
@@ -182,7 +181,7 @@ def note_view(url_id):
 
 @app.route('/edit/<string:url_id>/delete')
 def note_delete(url_id):
-	note = db.session.query(Note).filter_by(url_id=url_id)
+	note = db.session.query(Note).filter_by(url_id=url_id).first()
 	params = db.session.query(UserNoteParams).filter_by(note_id=note.id).first()
 	if params:
 		if not current_user.is_authenticated \
@@ -190,17 +189,18 @@ def note_delete(url_id):
 			flash("You have not rights to delete this note!11")
 			return redirect(url_for('note_view', url_id=url_id))
 
-	accesses = db.session.query(PrivateAccess).filter_by(user_id=user_id).all()
+	accesses = db.session.query(PrivateAccess).filter_by(note_id=note.id).all()
 	for access in accesses:
 		db_session_delete(access, err_msg='did not have accesses')
 	db_session_delete(note, "{}'th note was deleted".format(note.id))
 	
-	return redirect(url_for('note_view', url_id=url_id))
+	return redirect(url_for('index'))
 
 
 @app.route('/user/<string:username>')
-# @quote_kw_args
+@quote_kw_args
 def user_notes(username):
+	username = unquote(username)
 	user = get_user_by_username(username)
 	if not user:
 		return jsonify('404: Not Found'), 404
@@ -214,7 +214,7 @@ def user_notes(username):
 	notes = []
 	for param in params:
 		notes.append(Note.query.get(param.note_id))
-	return render_template('user_notes.html', notes=notes)
+	return render_template('user_notes.html', username=username, notes=notes)
 
 
 @app.route('/profile', methods=['GET', 'POST'])
