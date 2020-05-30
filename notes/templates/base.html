@@ -13,6 +13,7 @@
 		<a class="navbar-brand btn btn-dark btn-lg active" href="{{ url_for('index') }}">Notes</a>
 		<a class="navbar-brand" href="{{ url_for('chart') }}">Chart</a>
 		<a class="navbar-brand" href="{{ url_for('note_create') }}">Create</a>
+		<a class="navbar-brand" href="{{ url_for('search') }}">Search</a>
 	{% if current_user.is_authenticated %}
 	    <a class="navbar-brand" href="{{ url_for('profile') }}">user <b>{{ current_user.username }}</b></a>
 	    <a class="navbar-brand" href="{{ url_for('user_notes', username=current_user.username) }}">My notes</a>

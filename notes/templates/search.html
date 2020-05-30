@@ -1,17 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %} <title>User Notes</title> {% endblock %}
+{% block title %} <title>Search</title> {% endblock %}
 
 {% block css_links %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/notes.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/authorization.css') }}">
 {% endblock %}
-    
+
 
 {% block content %}
-    <div class="content-notes">
-        <h1>{{ username }}'s notes</h1>
+        <h1>Search</h1>
         
-
+    <div class="content-section">
+      <form action="" method="POST" novalidate>
+        {{ form.search_query.label }}
+        {{ form.search_query(class_="form-control", size=32) }}
+        {{ form.submit(class_="form-control", size=32) }}
+      </form>
+    </div>
         <table id="printIndentTable" class="table table-bordered table-hover ">
             <tr>
               <th>Title</th>
@@ -21,10 +26,10 @@
             {% for note in notes %}
             <tr>
               <td><a href="{{url_for('note_view', url_id=note.url_id)}}">{{ note.title }}</a></td>
-              {% if username %}
-                <td><a href="{{url_for('user_notes', username=username)}}">{{ username }}</a></td>
+              {% if note.username %}
+                <td><a href="{{url_for('user_notes', username=note.username)}}">{{ note.username }}</a></td>
               {% else %}
-                <td>{{ username }}</td>
+                <td>{{ note.username }}</td>
               {% endif %}
               <td>{{ note.updated }}</td>
             </tr>
@@ -32,7 +37,6 @@
           </table>
 
 
-    </div>
 {% endblock %}
 
 

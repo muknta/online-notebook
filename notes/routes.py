@@ -13,7 +13,8 @@ from .forms import (
 		UserForm,
 		UserNoteParamsForm,
 		RegisterForm,
-		LoginForm
+		LoginForm,
+		SearchForm
 	)
 from secrets import choice as sec_choice
 from string import digits, ascii_letters
@@ -100,9 +101,29 @@ def index():
 						Note.created, Note.updated, User.username)\
 					.filter(or_(UserNoteParams.id == None,
 								UserNoteParams.private_access == False))\
-					.order_by(Note.created.desc())
+					.order_by(Note.updated.desc())
 	
 	return render_template('index.html', notes=notes)
+
+
+@app.route('/search', methods=['GET','POST'])
+def search():
+	form = SearchForm()
+	if request.method == 'POST' and form.submit.data:
+		search = "%{}%".format(form.search_query.data)
+		notes = db.session.query(Note).join(UserNoteParams, 
+						UserNoteParams.note_id == Note.id, isouter=True)\
+						.join(User, 
+						User.id == UserNoteParams.user_id, isouter=True)\
+						.add_columns(Note.id, Note.title, Note.url_id,
+							Note.text, Note.updated, User.username)\
+						.filter(or_(User.username.like(search),
+									Note.title.like(search),
+									Note.text.like(search)))\
+						.order_by(Note.updated.desc())
+
+		return render_template('search.html', form=form, notes=notes)
+	return render_template('search.html', form=form)
 
 
 def generate_url_id():

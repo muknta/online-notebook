@@ -26,11 +26,7 @@
               {% else %}
                 <td>{{ note.username }}</td>
               {% endif %}
-              {% if note.updated %}
-                <td>{{ note.updated }}</td>
-              {% else %}
-                <td>{{ note.created }}</td>
-              {% endif %}
+              <td>{{ note.updated }}</td>
             </tr>
             {% endfor %}
           </table>

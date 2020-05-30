@@ -27,6 +27,12 @@ class UserNoteParamsForm(FlaskForm):
 	change_possibility = BooleanField('change possibility')
 
 
+class SearchForm(FlaskForm):
+	search_query = StringField('Query', validators=[DataRequired(),
+										Length(max=100)])
+	submit = SubmitField('Search')
+
+
 class RegisterForm(FlaskForm):
 	username = StringField('Username *', validators=[DataRequired()])
 	password = PasswordField('Password *', validators=[
