@@ -6,7 +6,7 @@ from flask_login import (
 	current_user, login_user, logout_user, login_required
 )
 from notes import app, db
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from .models import User, Note, UserNoteParams, PrivateAccess
 from .forms import (
 		NoteForm,
@@ -80,15 +80,33 @@ def db_session_delete(del_elem, succ_msg='', err_msg='Some error...'):
 
 @app.route("/chart")
 def chart():
-	legend = 'Notes Type'
-	labels = ['anonymous notes', 'user notes']
+	pie_legend = 'Notes Type'
+	pie_labels = ['anonymous notes', 'user notes']
 
 	anon_notes_count = db.session.query(Note).join(UserNoteParams, 
 					UserNoteParams.note_id == Note.id, isouter=True)\
 					.filter(UserNoteParams.id == None).count()
 	user_notes_count = db.session.query(UserNoteParams.id).count()
-	values = [anon_notes_count, user_notes_count]
-	return render_template('chart.html', values=values, labels=labels, legend=legend)
+	pie_values = [anon_notes_count, user_notes_count]
+
+
+	line_legend = 'User Notes'
+
+	users = db.session.query(func.count(UserNoteParams.user_id))\
+								.join(User,
+									User.id == UserNoteParams.user_id, isouter=True)\
+								.add_columns(User.username)\
+								.group_by(User.username)
+
+	line_labels = []
+	line_values = []
+	for user in users:
+		line_labels.append(user[1])
+		line_values.append(user[0])
+
+	return render_template('chart.html',
+			pie_values=pie_values, pie_labels=pie_labels, pie_legend=pie_legend,
+			line_values=line_values, line_labels=line_labels, line_legend=line_legend)
 
 
 @app.route('/')
@@ -98,7 +116,7 @@ def index():
 					.join(User, 
 					User.id == UserNoteParams.user_id, isouter=True)\
 					.add_columns(Note.id, Note.title, Note.url_id,
-						Note.created, Note.updated, User.username)\
+						Note.updated, User.username)\
 					.filter(or_(UserNoteParams.id == None,
 								UserNoteParams.private_access == False))\
 					.order_by(Note.updated.desc())
@@ -160,16 +178,23 @@ def note_edit(url_id):
 		if current_user.is_authenticated \
 			and params.user_id == current_user.id:
 			params_form = UserNoteParamsForm(formdata=request.form, obj=params)
-			params_form.access.data = 'private' if params.private_access else 'public'
+			params_form.private_access.data = params.private_access
+			params_form.encryption.data = params.encryption
+			params_form.change_possibility.data = params.change_possibility
 		else:
 			if params.private_access:
 				username = User.query.get(params.user_id).username
+				flash("This note under private control, don't touch that!11)00")
 				return redirect(url_for('user_notes', username=username))
 			if not params.change_possibility or params.encryption:
 				return redirect(url_for('note_view', url_id=url_id))
 	if request.method == 'POST' and note_form.validate_on_submit():
 		if params_form:
-			params.private_access = True if params_form.access.data == 'private' else False
+			flash(f'{params.private_access}')
+			params.private_access = params_form.private_access.data
+			
+			flash(f'{params_form.private_access.data}')
+			flash(f'{params.private_access} {params.encryption}')
 			params.encryption = params_form.encryption.data
 			params.change_possibility = params_form.change_possibility.data
 		note.title = note_form.title.data
@@ -213,7 +238,8 @@ def note_delete(url_id):
 	accesses = db.session.query(PrivateAccess).filter_by(note_id=note.id).all()
 	for access in accesses:
 		db_session_delete(access, err_msg='did not have accesses')
-	db_session_delete(note, "{}'th note was deleted".format(note.id))
+	db_session_delete(params, err_msg='did not have params')
+	db_session_delete(note, "{}th note was deleted".format(note.id))
 	
 	return redirect(url_for('index'))
 
@@ -221,6 +247,7 @@ def note_delete(url_id):
 @app.route('/user/<string:username>')
 @quote_kw_args
 def user_notes(username):
+	# unquote from percent-encoding
 	username = unquote(username)
 	user = get_user_by_username(username)
 	if not user:
@@ -315,7 +342,6 @@ def register():
 	if form.validate_on_submit():
 		if get_user_by_username(form.username.data):
 			flash('User "{}" already exist'.format(form.username.data))
-			# return redirect(url_for('register'))
 		else:
 			new_user = User(username=form.username.data,
 							password=form.password.data,
@@ -325,9 +351,6 @@ def register():
 			db_session_add(new_user, message)
 
 			return redirect(url_for('login'))
-	elif form.submit.data and not form.validate_on_submit():
-		flash('{} - {} - {} - {}'.format(form.username.data,form.password.data,form.confirm.data,form.email.data))
-
 	return render_template('register.html', form=form)
 
 

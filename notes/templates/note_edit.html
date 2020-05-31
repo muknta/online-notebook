@@ -16,7 +16,8 @@
             {% if params_form %}
                 {{ params_form.hidden_tag() }}
                 <fieldset class="form-group">
-                {{ params_form.access() }}<br>
+                {{ params_form.private_access.label }}
+                {{ params_form.private_access() }}<br>
                 {{ params_form.encryption.label }}
                 {{ params_form.encryption() }}<br>
                 {{ params_form.change_possibility.label }}

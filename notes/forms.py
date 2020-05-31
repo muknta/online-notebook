@@ -22,7 +22,7 @@ class NoteForm(FlaskForm):
 
 
 class UserNoteParamsForm(FlaskForm):
-	access = RadioField('access', choices=['private','public'])
+	private_access = BooleanField('private')
 	encryption = BooleanField('encryption')
 	change_possibility = BooleanField('change possibility')
 

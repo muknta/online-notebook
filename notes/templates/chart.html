@@ -9,12 +9,14 @@
     
 
 {% block content %}
+    <div class="content-section">
         <h1>Pie Chart</h1>
-        
-        <!-- bar chart canvas element -->
-        
         <canvas id="chart" width="600" height="400"></canvas>
         
+        <h1>Line Chart</h1>
+        <canvas id="chart2" width="600" height="400"></canvas>
+        
+    </div>
 
 {% endblock %}
 
@@ -23,11 +25,11 @@
 
     <script>
         var chartData = {
-          labels : [{% for item in labels %}
+          labels : [{% for item in pie_labels %}
                      "{{item}}",
                     {% endfor %}],
           datasets : [{
-              label: '{{ legend }}',
+              label: '{{ pie_legend }}',
               fill: true,
               lineTension: 0.1,
               backgroundColor: "rgba(75,192,192,0.4)",
@@ -45,7 +47,7 @@
               pointHoverBorderWidth: 2,
               pointRadius: 1,
               pointHitRadius: 10,
-              data : [{% for item in values %}
+              data : [{% for item in pie_values %}
                         {{item}},
                       {% endfor %}],
               spanGaps: false
@@ -58,6 +60,44 @@
             var myChart = new Chart(ctx, {
               type: 'pie',
               data: chartData,
+            });
+
+            var chartData2 = {
+          labels : [{% for item in line_labels %}
+                     "{{item}}",
+                    {% endfor %}],
+          datasets : [{
+              label: '{{ line_legend }}',
+              fill: true,
+              lineTension: 0.1,
+              backgroundColor: "rgba(75,192,192,0.4)",
+              borderColor: "rgba(75,192,192,1)",
+              borderCapStyle: 'butt',
+              borderDash: [],
+              borderDashOffset: 0.0,
+              borderJoinStyle: 'miter',
+              pointBorderColor: "rgba(75,192,192,1)",
+              pointBackgroundColor: "#fff",
+              pointBorderWidth: 1,
+              pointHoverRadius: 5,
+              pointHoverBackgroundColor: "rgba(75,192,192,1)",
+              pointHoverBorderColor: "rgba(220,220,220,1)",
+              pointHoverBorderWidth: 2,
+              pointRadius: 1,
+              pointHitRadius: 10,
+              data : [{% for item in line_values %}
+                        {{item}},
+                      {% endfor %}],
+              spanGaps: false
+          }]
+        }
+
+            var ctx2 = document.getElementById("chart2").getContext("2d");
+                 
+            // create the chart using the chart canvas
+            var myChart2 = new Chart(ctx2, {
+              type: 'line',
+              data: chartData2,
             });
 
     </script>
